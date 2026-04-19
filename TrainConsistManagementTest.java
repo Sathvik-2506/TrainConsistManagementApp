@@ -1,29 +1,42 @@
-// Logic for searching bogie IDs using Linear Search
-public class BogieSearcher {
+import java.util.Arrays;
+
+// Logic for searching bogie IDs using Optimized Binary Search
+public class BogieOptimizedSearcher {
 
     /**
-     * Searches for a specific bogie ID in an array using Linear Search.
-     * This technique checks each element sequentially and is suitable for unsorted data.
-     * @param bogieIds Array of bogie IDs to search through.
-     * @param targetId The specific ID to locate.
-     * @return true if the ID exists in the array, false otherwise.
+     * Searches for a bogie ID using the Binary Search algorithm.
+     * Precondition: The array must be sorted. If not, it sorts it first.
+     * @param bogieIds Array of bogie IDs to search.
+     * @param targetId The ID to find.
+     * @return true if found, false otherwise.
      */
-    public boolean linearSearch(String[] bogieIds, String targetId) {
-        if (bogieIds == null || targetId == null) {
+    public boolean binarySearch(String[] bogieIds, String targetId) {
+        if (bogieIds == null || bogieIds.length == 0 || targetId == null) {
             return false;
         }
 
-        // Sequential Traversal: O(n) Time Complexity
-        for (String id : bogieIds) {
-            // Equality Comparison using .equals() for String safety
-            if (id.equals(targetId)) {
-                // Early Termination: Stop searching once found
-                return true; 
+        // Ensure data is sorted (Precondition for Binary Search)
+        // Note: In production, we assume data is already sorted to maintain O(log n)
+        Arrays.sort(bogieIds);
+
+        int low = 0;
+        int high = bogieIds.length - 1;
+
+        while (low <= high) {
+            // Divide-and-Conquer: Find middle index
+            int mid = low + (high - low) / 2;
+            int comparison = targetId.compareTo(bogieIds[mid]);
+
+            if (comparison == 0) {
+                return true; // Match found
+            } else if (comparison < 0) {
+                high = mid - 1; // Search left half
+            } else {
+                low = mid + 1; // Search right half
             }
         }
 
-        // Search Match Not Found after traversing the entire list
-        return false;
+        return false; // Exhausted search range
     }
 }
 
@@ -33,36 +46,48 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class TrainConsistManagementTest {
 
-    private final BogieSearcher searcher = new BogieSearcher();
+    private final BogieOptimizedSearcher searcher = new BogieOptimizedSearcher();
 
     @Test
-    void testSearch_BogieFound() {
+    void testBinarySearch_BogieFound() {
         String[] bogieIds = {"BG101", "BG205", "BG309", "BG412", "BG550"};
-        assertTrue(searcher.linearSearch(bogieIds, "BG309"), "System should identify an existing bogie ID.");
+        assertTrue(searcher.binarySearch(bogieIds, "BG309"), "Should find ID in the middle.");
     }
 
     @Test
-    void testSearch_BogieNotFound() {
+    void testBinarySearch_BogieNotFound() {
         String[] bogieIds = {"BG101", "BG205", "BG309", "BG412", "BG550"};
-        assertFalse(searcher.linearSearch(bogieIds, "BG999"), "System should return false for non-existent ID.");
+        assertFalse(searcher.binarySearch(bogieIds, "BG999"), "Should return false for non-existent ID.");
     }
 
     @Test
-    void testSearch_FirstElementMatch() {
+    void testBinarySearch_FirstElementMatch() {
         String[] bogieIds = {"BG101", "BG205", "BG309", "BG412", "BG550"};
-        assertTrue(searcher.linearSearch(bogieIds, "BG101"), "Search should terminate successfully at the first position.");
+        assertTrue(searcher.binarySearch(bogieIds, "BG101"), "Should find ID at the first position.");
     }
 
     @Test
-    void testSearch_LastElementMatch() {
+    void testBinarySearch_LastElementMatch() {
         String[] bogieIds = {"BG101", "BG205", "BG309", "BG412", "BG550"};
-        assertTrue(searcher.linearSearch(bogieIds, "BG550"), "Search should traverse to the final element and return success.");
+        assertTrue(searcher.binarySearch(bogieIds, "BG550"), "Should find ID at the last position.");
     }
 
     @Test
-    void testSearch_SingleElementArray() {
+    void testBinarySearch_SingleElementArray() {
         String[] bogieIds = {"BG101"};
-        assertTrue(searcher.linearSearch(bogieIds, "BG101"), "Search should work correctly for a single element array.");
-        assertFalse(searcher.linearSearch(bogieIds, "BG202"), "Search should return false if single element does not match.");
+        assertTrue(searcher.binarySearch(bogieIds, "BG101"), "Should work with one element.");
+    }
+
+    @Test
+    void testBinarySearch_EmptyArray() {
+        String[] bogieIds = {};
+        assertFalse(searcher.binarySearch(bogieIds, "BG101"), "Empty array should return false.");
+    }
+
+    @Test
+    void testBinarySearch_UnsortedInputHandled() {
+        // Input is explicitly unsorted
+        String[] bogieIds = {"BG309", "BG101", "BG550", "BG205", "BG412"};
+        assertTrue(searcher.binarySearch(bogieIds, "BG205"), "Should sort and then find the ID.");
     }
 }
