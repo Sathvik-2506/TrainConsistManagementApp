@@ -1,85 +1,92 @@
-// Custom Exception Class
-class InvalidCapacityException extends Exception {
-    public InvalidCapacityException(String message) {
+// Custom Runtime Exception
+class CargoSafetyException extends RuntimeException {
+    public CargoSafetyException(String message) {
         super(message);
     }
 }
 
-// Abstract Bogie Class
-abstract class Bogie {
-    protected String type;
-    protected int capacity;
+// Goods Bogie Class
+class GoodsBogie {
+    private String shape;
+    private String cargoType;
 
-    public Bogie(String type, int capacity) throws InvalidCapacityException {
-        if (capacity <= 0) {
-            throw new InvalidCapacityException("Capacity must be greater than zero");
+    public GoodsBogie(String shape) {
+        this.shape = shape;
+    }
+
+    public void assignCargo(String cargo) {
+        System.out.println("Attempting to assign " + cargo + " to " + shape + " bogie...");
+        try {
+            // Business Rule: Petroleum cannot be in Rectangular bogies
+            if (shape.equalsIgnoreCase("Rectangular") && cargo.equalsIgnoreCase("Petroleum")) {
+                throw new CargoSafetyException("Safety Violation: Petroleum cannot be transported in a Rectangular bogie!");
+            }
+            this.cargoType = cargo;
+            System.out.println("Success: " + cargo + " assigned successfully.");
+        } catch (CargoSafetyException e) {
+            System.err.println("Handled Exception: " + e.getMessage());
+            this.cargoType = null; // Ensure no assignment on failure
+        } finally {
+            System.out.println("Cargo validation process completed for this bogie.");
         }
-        this.type = type;
-        this.capacity = capacity;
     }
 
-    public String getType() { return type; }
-    public int getCapacity() { return capacity; }
-}
-
-// Concrete Passenger Bogie Class
-class PassengerBogie extends Bogie {
-    public PassengerBogie(String subType, int capacity) throws InvalidCapacityException {
-        super(subType, capacity);
-    }
+    public String getCargoType() { return cargoType; }
+    public String getShape() { return shape; }
 }
 
 // --- UNIT TESTS ---
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
 public class TrainConsistManagementTest {
 
     @Test
-    void testException_ValidCapacityCreation() {
-        assertDoesNotThrow(() -> {
-            PassengerBogie bogie = new PassengerBogie("Sleeper", 72);
-            assertNotNull(bogie);
-        });
+    void testCargo_SafeAssignment() {
+        GoodsBogie cylindrical = new GoodsBogie("Cylindrical");
+        cylindrical.assignCargo("Petroleum");
+        assertEquals("Petroleum", cylindrical.getCargoType(), "Cylindrical bogies should accept Petroleum.");
     }
 
     @Test
-    void testException_NegativeCapacityThrowsException() {
-        Exception exception = assertThrows(InvalidCapacityException.class, () -> {
-            new PassengerBogie("AC Chair", -10);
-        });
-        assertEquals("Capacity must be greater than zero", exception.getMessage());
+    void testCargo_UnsafeAssignmentHandled() {
+        GoodsBogie rectangular = new GoodsBogie("Rectangular");
+        // We catch inside the method, so no exception should propagate out to crash the app
+        assertDoesNotThrow(() -> rectangular.assignCargo("Petroleum"), 
+            "Exception should be caught internally using try-catch.");
     }
 
     @Test
-    void testException_ZeroCapacityThrowsException() {
-        assertThrows(InvalidCapacityException.class, () -> {
-            new PassengerBogie("First Class", 0);
-        });
+    void testCargo_CargoNotAssignedAfterFailure() {
+        GoodsBogie rectangular = new GoodsBogie("Rectangular");
+        rectangular.assignCargo("Petroleum");
+        assertNull(rectangular.getCargoType(), "Cargo should remain unassigned after a safety violation.");
     }
 
     @Test
-    void testException_ExceptionMessageValidation() {
-        try {
-            new PassengerBogie("Sleeper", -5);
-        } catch (InvalidCapacityException e) {
-            assertEquals("Capacity must be greater than zero", e.getMessage());
-        }
+    void testCargo_ProgramContinuesAfterException() {
+        GoodsBogie rectangular = new GoodsBogie("Rectangular");
+        GoodsBogie anotherRectangular = new GoodsBogie("Rectangular");
+        
+        rectangular.assignCargo("Petroleum"); // Fails but caught
+        anotherRectangular.assignCargo("Grains"); // Should proceed normally
+        
+        assertEquals("Grains", anotherRectangular.getCargoType(), "Application should continue processing subsequent assignments.");
     }
 
     @Test
-    void testException_ObjectIntegrityAfterCreation() throws InvalidCapacityException {
-        PassengerBogie bogie = new PassengerBogie("AC Chair", 64);
-        assertEquals("AC Chair", bogie.getType());
-        assertEquals(64, bogie.getCapacity());
-    }
-
-    @Test
-    void testException_MultipleValidBogiesCreation() {
-        assertDoesNotThrow(() -> {
-            new PassengerBogie("Sleeper", 72);
-            new PassengerBogie("AC Chair", 50);
-            new PassengerBogie("First Class", 24);
-        });
+    void testCargo_FinallyBlockExecution() {
+        ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+        System.setOut(new PrintStream(outContent));
+        
+        GoodsBogie bogie = new GoodsBogie("Rectangular");
+        bogie.assignCargo("Petroleum");
+        
+        assertTrue(outContent.toString().contains("Cargo validation process completed"), 
+            "The finally block must execute even when an exception occurs.");
+        
+        System.setOut(System.out); // Reset stream
     }
 }
